@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111318">
+  <title>Paperless — PDF Workspace</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="appShell">
+    <aside class="rail">
+      <div class="brand">
+        <div class="logo">P</div>
+        <div><strong>Paperless</strong><small>PDF, civilized.</small></div>
+      </div>
+
+      <button class="primary railPrimary" id="openBtn">＋ Open PDFs</button>
+      <input id="fileInput" type="file" accept="application/pdf" multiple hidden>
+
+      <nav class="railNav" aria-label="Workspace">
+        <button class="nav active" data-view="library">Library</button>
+        <button class="nav" data-view="binder">Binder</button>
+      </nav>
+
+      <div class="privacyNote">
+        <strong>Local by design</strong>
+        <span>Your PDFs stay in this browser on this device.</span>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="searchWrap">
+          <input id="searchBox" type="search" placeholder="Search this PDF…" autocomplete="off">
+          <select id="searchScope" aria-label="Search scope">
+            <option value="current">This PDF</option>
+            <option value="all">All PDFs</option>
+          </select>
+        </div>
+        <span id="status" role="status" aria-live="polite"></span>
+      </header>
+
+      <section id="libraryView" class="view active">
+        <aside class="libraryPane">
+          <div class="paneHeading">
+            <div>
+              <span class="eyebrow">Workspace</span>
+              <h2>Library</h2>
+            </div>
+            <button class="iconBtn" id="libraryOpenBtn" title="Open PDFs">＋</button>
+          </div>
+          <div id="docs" class="docList"></div>
+        </aside>
+
+        <section class="docPane empty" id="docPane">
+          <div class="emptyState">
+            <span class="eyebrow">Born-digital PDFs</span>
+            <h1>Make PDFs behave like software.</h1>
+            <p>Open a PDF and Paperless will infer its structure, index its contents, and turn it into a navigable workspace. Nothing is uploaded.</p>
+            <button class="primary" id="emptyOpenBtn">Open a PDF</button>
+          </div>
+        </section>
+      </section>
+
+      <section id="binderView" class="view">
+        <div class="binderPage">
+          <div class="binderIntro">
+            <span class="eyebrow">Compiler</span>
+            <h1>Binder</h1>
+            <p>Combine PDFs into one clean packet. Paperless adds a generated cover and index, then preserves every source page exactly as-is.</p>
+          </div>
+          <div id="binderDocs" class="binderDocs"></div>
+          <div class="binderControls">
+            <label>
+              Binder title
+              <input id="binderTitle" value="Compiled Binder">
+            </label>
+            <button class="primary" id="buildBinder">Build Binder</button>
+          </div>
+          <div id="binderResult"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="dropOverlay" id="dropOverlay" aria-hidden="true">
+    <div><strong>Drop PDFs here</strong><span>Born-digital files only</span></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
