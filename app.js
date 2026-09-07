@@ -2,7 +2,7 @@ import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.3.289/build
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.3.289/build/pdf.worker.min.mjs';
 
-const DB_NAME = 'paperless-workspace';
+const DB_NAME = 'pdfed-workspace';
 const DB_VERSION = 1;
 const STORE = 'documents';
 
@@ -12,6 +12,7 @@ const state = {
   docs: [],
   current: null,
   currentPdf: null,
+  currentPdfTask: null,
   page: 1,
   mode: 'read',
   binderOrder: [],
@@ -213,42 +214,47 @@ function mapSections(structure, pages) {
 }
 
 async function parsePdf(file, bytes, id) {
-  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes.slice(0)) }).promise;
-  const pageLines = [];
-  const pageTexts = [];
-  let visibleChars = 0;
-
-  for (let p = 1; p <= pdf.numPages; p++) {
-    status(`Indexing ${file.name} · page ${p}/${pdf.numPages}`);
-    const page = await pdf.getPage(p);
-    const viewport = page.getViewport({ scale: 1 });
-    const content = await page.getTextContent();
-    const lines = groupItemsIntoLines(content.items, viewport.height);
-    pageLines.push(lines);
-    const text = normalize(lines.map(l => l.text).join('\n'));
-    pageTexts.push(text);
-    visibleChars += text.length;
-  }
-
-  if (visibleChars < Math.max(30, pdf.numPages * 4)) {
-    throw new Error('This looks image-only or scanned. Paperless currently supports born-digital PDFs only.');
-  }
-
-  let structure = await outlineStructure(pdf);
-  const bodySize = dominantBodySize(pageLines);
-  if (!structure.length) structure = inferStructure(pageLines, bodySize);
-  const sections = mapSections(structure, pdf.numPages);
-  let metadata = {};
+  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(bytes.slice(0)) });
+  let pdf = null;
   try {
-    const meta = await pdf.getMetadata();
-    metadata = meta?.info || {};
-  } catch (_) {}
-  await pdf.destroy();
+    pdf = await loadingTask.promise;
+    const pageLines = [];
+    const pageTexts = [];
+    let visibleChars = 0;
 
-  return {
-    id, name: file.name, size: file.size, created: Date.now(), pages: pageTexts.length,
-    bytes, pageTexts, pageLines, structure, sections, bodySize, metadata
-  };
+    for (let p = 1; p <= pdf.numPages; p++) {
+      status(`Indexing ${file.name} · page ${p}/${pdf.numPages}`);
+      const page = await pdf.getPage(p);
+      const viewport = page.getViewport({ scale: 1 });
+      const content = await page.getTextContent();
+      const lines = groupItemsIntoLines(content.items, viewport.height);
+      pageLines.push(lines);
+      const text = normalize(lines.map(l => l.text).join('\n'));
+      pageTexts.push(text);
+      visibleChars += text.length;
+    }
+
+    if (visibleChars < Math.max(30, pdf.numPages * 4)) {
+      throw new Error('This looks image-only or scanned. PDFed currently supports born-digital PDFs only.');
+    }
+
+    let structure = await outlineStructure(pdf);
+    const bodySize = dominantBodySize(pageLines);
+    if (!structure.length) structure = inferStructure(pageLines, bodySize);
+    const sections = mapSections(structure, pdf.numPages);
+    let metadata = {};
+    try {
+      const meta = await pdf.getMetadata();
+      metadata = meta?.info || {};
+    } catch (_) {}
+
+    return {
+      id, name: file.name, size: file.size, created: Date.now(), pages: pageTexts.length,
+      bytes, pageTexts, pageLines, structure, sections, bodySize, metadata
+    };
+  } finally {
+    try { await loadingTask.destroy(); } catch (_) {}
+  }
 }
 
 async function importFiles(files) {
@@ -312,7 +318,11 @@ function renderDocs() {
     await dbDelete(id);
     if (state.current?.id === id) {
       state.current = null;
+      if (state.currentPdfTask) {
+        try { await state.currentPdfTask.destroy(); } catch (_) {}
+      }
       state.currentPdf = null;
+      state.currentPdfTask = null;
       renderEmpty();
     }
     await loadDocs();
@@ -325,7 +335,7 @@ function renderEmpty() {
     <div class="emptyState">
       <span class="eyebrow">Born-digital PDFs</span>
       <h1>Make PDFs behave like software.</h1>
-      <p>Open a PDF and Paperless will infer its structure, index its contents, and turn it into a navigable workspace. Nothing is uploaded.</p>
+      <p>Open a PDF and PDFed will infer its structure, index its contents, and turn it into a navigable workspace. Nothing is uploaded.</p>
       <button class="primary" onclick="document.getElementById('fileInput').click()">Open a PDF</button>
     </div>`;
 }
@@ -334,11 +344,12 @@ async function openDoc(id) {
   status('Opening…');
   const doc = await dbGet(id);
   if (!doc) return;
-  if (state.currentPdf) {
-    try { await state.currentPdf.destroy(); } catch (_) {}
+  if (state.currentPdfTask) {
+    try { await state.currentPdfTask.destroy(); } catch (_) {}
   }
   state.current = doc;
-  state.currentPdf = await pdfjsLib.getDocument({ data: new Uint8Array(doc.bytes.slice(0)) }).promise;
+  state.currentPdfTask = pdfjsLib.getDocument({ data: new Uint8Array(doc.bytes.slice(0)) });
+  state.currentPdf = await state.currentPdfTask.promise;
   state.page = 1;
   state.mode = 'read';
   $('#searchScope').value = 'current';
@@ -550,8 +561,8 @@ async function buildBinder() {
   const { PDFDocument, StandardFonts, rgb } = window.PDFLib;
   const out = await PDFDocument.create();
   out.setTitle(title);
-  out.setCreator('Paperless');
-  out.setProducer('Paperless Binder');
+  out.setCreator('PDFed');
+  out.setProducer('PDFed Binder');
   const font = await out.embedFont(StandardFonts.Helvetica);
   const bold = await out.embedFont(StandardFonts.HelveticaBold);
 
@@ -571,7 +582,7 @@ async function buildBinder() {
 
   let page = out.addPage([612, 792]);
   page.drawText(title, { x: 54, y: 650, size: 28, font: bold, color: rgb(.08,.09,.11) });
-  page.drawText('Compiled with Paperless', { x: 54, y: 618, size: 11, font, color: rgb(.42,.45,.50) });
+  page.drawText('Compiled with PDFed', { x: 54, y: 618, size: 11, font, color: rgb(.42,.45,.50) });
   page.drawText(`${docs.length} documents · ${docs.reduce((n,d) => n + d.pages, 0)} source pages`, { x: 54, y: 588, size: 12, font, color: rgb(.20,.22,.25) });
 
   for (let ip = 0; ip < indexPageCount; ip++) {

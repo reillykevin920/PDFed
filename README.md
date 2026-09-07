@@ -1,4 +1,4 @@
-# Paperless
+# PDFed
 
 A static, local-first workspace for born-digital PDFs.
 
@@ -13,7 +13,7 @@ A static, local-first workspace for born-digital PDFs.
 
 That is the entire deployment. There is no Python server, Node server, database server, or build command.
 
-PDFs opened in Paperless are processed in the browser and stored locally in that browser's IndexedDB. The hosted site does not receive the PDF files.
+PDFs opened in PDFed are processed in the browser and stored locally in that browser's IndexedDB. The hosted site does not receive the PDF files.
 
 ## Current scope
 
