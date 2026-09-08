@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#111318">
-  <title>PDFed — PDF Workspace</title>
-  <link rel="stylesheet" href="style.css">
+  <title>PDFed — Professional PDF Workspace</title>
+  <link rel="stylesheet" href="style.css?v=0.7">
 </head>
 <body>
   <div class="appShell">
@@ -21,6 +21,7 @@
       <nav class="railNav" aria-label="Workspace">
         <button class="nav active" data-view="library">Library</button>
         <button class="nav" data-view="binder">Binder</button>
+        <button class="nav" data-view="compare">Compare</button>
       </nav>
 
       <div class="privacyNote">
@@ -44,10 +45,7 @@
       <section id="libraryView" class="view active">
         <aside class="libraryPane">
           <div class="paneHeading">
-            <div>
-              <span class="eyebrow">Workspace</span>
-              <h2>Library</h2>
-            </div>
+            <div><span class="eyebrow">Workspace</span><h2>Library</h2></div>
             <button class="iconBtn" id="libraryOpenBtn" title="Open PDFs">＋</button>
           </div>
           <div id="docs" class="docList"></div>
@@ -57,7 +55,7 @@
           <div class="emptyState">
             <span class="eyebrow">Born-digital PDFs</span>
             <h1>Make PDFs behave like software.</h1>
-            <p>Open a PDF and PDFed will infer its structure, index its contents, and turn it into a navigable workspace. Nothing is uploaded.</p>
+            <p>Open a PDF and PDFed turns its pages into sections, references, figures, tables, and searchable passages. Nothing is uploaded.</p>
             <button class="primary" id="emptyOpenBtn">Open a PDF</button>
           </div>
         </section>
@@ -68,27 +66,55 @@
           <div class="binderIntro">
             <span class="eyebrow">Compiler</span>
             <h1>Binder</h1>
-            <p>Combine PDFs into one clean packet. PDFed adds a generated cover and index, then preserves every source page exactly as-is.</p>
+            <p>Compile working PDFs into one navigable packet. Reorder documents, rename packet entries, preserve markups and page edits, and generate a cover, clickable index, dividers, and PDF bookmarks.</p>
           </div>
           <div id="binderDocs" class="binderDocs"></div>
+          <div class="binderOptions">
+            <label><input id="binderDividers" type="checkbox" checked> Add document dividers</label>
+            <label><input id="binderPageNumbers" type="checkbox"> Add binder page numbers to source pages</label>
+          </div>
           <div class="binderControls">
-            <label>
-              Binder title
-              <input id="binderTitle" value="Compiled Binder">
-            </label>
+            <label>Binder title<input id="binderTitle" value="Compiled Binder"></label>
             <button class="primary" id="buildBinder">Build Binder</button>
           </div>
           <div id="binderResult"></div>
         </div>
       </section>
+      <section id="compareView" class="view">
+        <div class="comparePage">
+          <div class="compareIntro">
+            <span class="eyebrow">Review</span>
+            <h1>Compare</h1>
+            <p>Compare two imported PDFs side by side. PDFed matches section titles, flags likely changes, and keeps source pages available for visual review.</p>
+          </div>
+          <div class="compareControls">
+            <label>Original<select id="compareA"></select></label>
+            <span class="compareVs">vs</span>
+            <label>Revision<select id="compareB"></select></label>
+            <button class="primary" id="runCompare">Compare documents</button>
+          </div>
+          <div id="compareResult" class="compareResult"></div>
+        </div>
+      </section>
     </main>
   </div>
+
+
+  <dialog id="exportDialog" class="exportDialog">
+    <form method="dialog" class="exportPanel">
+      <div class="exportHead"><div><span class="eyebrow">Export</span><h2>Revised PDF</h2></div><button value="cancel" class="dialogClose" aria-label="Close">×</button></div>
+      <label>Filename<input id="exportFilename" type="text" autocomplete="off"></label>
+      <label class="checkRow"><input id="exportMarkups" type="checkbox" checked> Burn markups into exported PDF</label>
+      <div id="redactionExportNote" class="redactionExportNote" hidden><b>Secure redaction enabled.</b><span>Pages containing redactions are rasterized before export so covered source text is not preserved. Those pages will no longer have selectable/searchable text.</span></div>
+      <div class="exportActions"><button value="cancel">Cancel</button><button type="button" class="primary" id="confirmExport">Export PDF</button></div>
+    </form>
+  </dialog>
 
   <div class="dropOverlay" id="dropOverlay" aria-hidden="true">
     <div><strong>Drop PDFs here</strong><span>Born-digital files only</span></div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-  <script type="module" src="app.js"></script>
+  <script type="module" src="app.js?v=0.7"></script>
 </body>
 </html>
